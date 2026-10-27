@@ -45,7 +45,7 @@ Writes to `output/`:
 | File | Purpose |
 |---|---|
 | `snomed_vaccines_ocl.jsonl` | Bulk import: the Source and all Concepts |
-| `snomed_vaccines_ocl_post_import.jsonl` | Bulk import, **after** the first file has finished: the Source again with `hierarchy_root_url`, then the Source Version |
+| `snomed_vaccines_ocl_post_import.jsonl` | Bulk import, **after** the first file has finished and the hierarchy root is set: the Source Version |
 | `snomed_vaccines_ocl.csv` | One row per concept, for human review before importing |
 
 ## How RF2 becomes OCL
@@ -70,6 +70,7 @@ Mapping to OCL:
 | Semantic tag, e.g. `(medicinal product)` | `concept_class` |
 | Is a relationships inside the subset | `parent_concept_urls` |
 | Attributes, GB preferred term, effective time, module | `extras` |
+| — (SNOMED has no datatype) | `datatype: "N/A"`, required by OCL; a vaccine product is not a question with a recorded value |
 | OWL axioms, definition status, inactive history, description IDs | not carried over |
 
 ## Importing into OCL
@@ -78,13 +79,26 @@ Mapping to OCL:
 2. Upload `output/snomed_vaccines_ocl.jsonl` with **Update existing off** and **Hierarchy** ticked.
 3. Wait until the import, including its child tasks, has finished. `created` should be 250 (1 Source + 249 Concepts). Lines in `others` failed validation; OCL does not say why.
 4. Check in OCL: concept `787859002` has 5 children; `1181000221105` has parent `836377006`.
-5. Upload `output/snomed_vaccines_ocl_post_import.jsonl` with **Update existing on** (it updates the existing Source to set the hierarchy root, then creates the source version).
+5. Set the hierarchy root with the API (the bulk importer cannot, and the web app has no field for it). In Git Bash, with your OCL API token from your OCL profile:
+
+   ```bash
+   OCL_TOKEN="your token"
+   curl -s -X PATCH "https://api.openconceptlab.org/orgs/HL7-Brasil/sources/SNOMED-CT-Vaccines/" -H "Authorization: Token $OCL_TOKEN" -H "Content-Type: application/json" -d '{"hierarchy_root_url": "/orgs/HL7-Brasil/sources/SNOMED-CT-Vaccines/concepts/787859002/"}'
+   unset OCL_TOKEN
+   ```
+
+   The reply should contain `"hierarchy_root_url":"/orgs/HL7-Brasil/sources/SNOMED-CT-Vaccines/concepts/787859002/"`. Clear the terminal history afterwards (`history -c`).
+6. Upload `output/snomed_vaccines_ocl_post_import.jsonl` to create the source version. A version copies the hierarchy root from HEAD when it is created, so do this after step 5.
 
 ## OCL behaviour this relies on
 
 - The parallel importer links `parent_concept_urls` in a final reconciliation pass, after every line of the file has been processed, so concept order does not matter — but a Source Version in the same file would be created before the hierarchy exists. Hence the separate version file. (`oclapi2` `core/importers/models.py`, `BulkImportParallelRunner`)
 - Validation errors land in the `others` bucket without a message; validate before uploading.
-- A source's `hierarchy_root_url` only renders the tree once the root concept exists, so it is set after the import (see [icd10cm-extended](https://github.com/filiperochalopes/icd10cm-extended)).
+- The bulk importer never updates an existing Source: `clean()` returns early when the Source exists, so it is reported as `exists` even with Update existing on. That setting only affects concepts and mappings.
+- The bulk importer drops `hierarchy_root_url`: it is not in `SourceImporter.allowed_fields`. It can only be set with an API update of the source, which checks the root concept exists in the same source (`core/sources/serializers.py`, `Source.clean()`). [icd10cm-extended](https://github.com/filiperochalopes/icd10cm-extended) does the same with a `PATCH`.
+- A Source Version copies `hierarchy_root_url` from HEAD when it is created (`Source.update_version_data`).
+- OCL's own SNOMED GPS load (`/orgs/SNOMED-International/sources/SNOMED-GPS/`) is a flat list: no hierarchy, synonyms or attributes, because the GPS release has none. This source is built from the full International Edition instead, which is why it must stay private.
+- The IPS FHIR guide's value set "Vaccines - IPS" is `descendent-of 787859002` (plus 787482006 |No known immunizations|), so this subset matches the SNOMED part of IPS vaccines.
 
 ## References
 
@@ -96,9 +110,10 @@ Mapping to OCL:
 
 ## Open items
 
-- [x] Move `hierarchy_root_url` from the Source line to the post-import file
 - [x] Decide the source's `canonical_url`: keep `http://snomed.info/sct` (OCL's SNOMED GPS subset uses its own)
 - [x] Test import of 6 concepts into `SNOMED-CT-Vaccines-TEST`: 7 created, 0 errors, parents and two-parent concept correct
-- [ ] Import the full subset into OCL and verify
+- [x] Import the full subset (2026-10-27): 249 concepts, root has 5 children, version `v20261001` created (249 concepts, hierarchy included)
+- [x] Set the hierarchy root on HEAD with an API PATCH. `v20261001` was created before it, so that version has no root; recreate the version if it is needed there
+- [ ] Delete `SNOMED-CT-Vaccines-TEST` in OCL when no longer needed
 - [ ] Hand over to Jon for vectorization
 - [ ] Cross-lingual testing needs Portuguese or Spanish terms (not in the International Edition)

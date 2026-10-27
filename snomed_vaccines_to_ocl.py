@@ -9,7 +9,8 @@ Steps (same as the walkthrough):
   4. Language refset    -> which synonym is Preferred in US / GB English
   5. Relationship file  -> defining attributes (active ingredient, role, ...)
   6. Write OCL JSON-lines (Source, Concepts with parent_concept_urls) + review CSV,
-     and a post-import file (hierarchy root + Source Version) to import once the first has finished
+     a post-import file (Source Version) to import once the first has finished, and print the
+     API PATCH that sets the hierarchy root in between
 
 Usage:
   python snomed_vaccines_to_ocl.py <path to RF2 release folder>
@@ -170,13 +171,13 @@ def main():
         if parents[code]:
             concept["parent_concept_urls"] = [f"{base}/{p}/" for p in sorted(parents[code])]
         lines.append(concept)
-    # The post-import file is imported only after the main import has finished:
-    # - hierarchy_root_url only takes effect once the root concept exists, so the full Source line is
-    #   sent again with it (OCL replaces fields wholesale, so nothing may be left out);
-    # - OCL's parallel importer links parent_concept_urls in a final reconciliation pass, after every
-    #   line of the file, so a Source Version in the main file would be created before the hierarchy.
+    # The post-import file is imported only after the main import has finished: OCL's parallel
+    # importer links parent_concept_urls in a final reconciliation pass, after every line of the
+    # file, so a Source Version in the main file would be created before the hierarchy.
+    # hierarchy_root_url is not set here: the bulk importer drops it and never updates an existing
+    # Source, so it is set with an API PATCH (printed below) before the post-import file, so the
+    # version copies it from HEAD.
     post_import = [
-        {**source, "hierarchy_root_url": f"{base}/{args.root}/"},
         {"type": "Source Version", "id": f"v{release_date}", "source": args.source,
          "owner": args.org, "owner_type": "Organization", "released": False,
          "description": f"SNOMED CT International {release_date}, << {args.root}, {len(subset)} concepts"},
@@ -208,6 +209,10 @@ def main():
     print(f"Multiple parents:      {sum(len(parents[c]) > 1 for c in subset)}", file=sys.stderr)
     print(f"Orphans (no parent):   {[c for c in subset if c != args.root and not parents[c]] or 'none'}", file=sys.stderr)
     print(f"Wrote {args.out}.jsonl ({len(lines)} lines), {args.out}_post_import.jsonl and {args.out}.csv", file=sys.stderr)
+    print("\nAfter importing the main file, set the hierarchy root (OCL_TOKEN = your OCL API token):", file=sys.stderr)
+    print(f'curl -s -X PATCH "https://api.openconceptlab.org/orgs/{args.org}/sources/{args.source}/" '
+          f'-H "Authorization: Token $OCL_TOKEN" -H "Content-Type: application/json" '
+          f"-d '{{\"hierarchy_root_url\": \"{base}/{args.root}/\"}}'", file=sys.stderr)
 
 
 if __name__ == "__main__":
