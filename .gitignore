@@ -1,0 +1,26 @@
+# --- SNOMED CT content: licensed, never commit ---
+# Generated OCL import files and review CSVs contain SNOMED CT terms.
+output/
+*.jsonl
+*.ndjson
+*.zip
+*.csv
+# RF2 release folders and files, if ever copied into this project
+SnomedCT_*/
+sct2_*.txt
+der2_*.txt
+
+# --- Secrets ---
+.env
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
