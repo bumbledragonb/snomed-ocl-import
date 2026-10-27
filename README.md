@@ -34,14 +34,18 @@ SNOMED CT is licensed content. **This repository contains code only.** The RF2 r
 python snomed_vaccines_to_ocl.py "path/to/SnomedCT_InternationalRF2_PRODUCTION_20261001T120000Z"
 ```
 
-Options: `--root` (another subset root SCTID), `--org`, `--source`, `--out`.
+Options: `--root` (another subset root SCTID), `--org`, `--source`, `--out`, and `--only` to build a small test file from a few concepts of the subset:
+
+```bash
+python snomed_vaccines_to_ocl.py "path/to/release" --source SNOMED-CT-Vaccines-TEST --out output/test_snomed_vaccines_ocl --only 787859002,836368004,836369007,863950005,836377006,1181000221105
+```
 
 Writes to `output/`:
 
 | File | Purpose |
 |---|---|
 | `snomed_vaccines_ocl.jsonl` | Bulk import: the Source and all Concepts |
-| `snomed_vaccines_ocl_version.jsonl` | Bulk import: the Source Version, imported **after** the first file has finished |
+| `snomed_vaccines_ocl_post_import.jsonl` | Bulk import, **after** the first file has finished: the Source again with `hierarchy_root_url`, then the Source Version |
 | `snomed_vaccines_ocl.csv` | One row per concept, for human review before importing |
 
 ## How RF2 becomes OCL
@@ -74,7 +78,7 @@ Mapping to OCL:
 2. Upload `output/snomed_vaccines_ocl.jsonl` with **Update existing off** and **Hierarchy** ticked.
 3. Wait until the import, including its child tasks, has finished. `created` should be 250 (1 Source + 249 Concepts). Lines in `others` failed validation; OCL does not say why.
 4. Check in OCL: concept `787859002` has 5 children; `1181000221105` has parent `836377006`.
-5. Upload `output/snomed_vaccines_ocl_version.jsonl` to create the source version.
+5. Upload `output/snomed_vaccines_ocl_post_import.jsonl` with **Update existing on** (it updates the existing Source to set the hierarchy root, then creates the source version).
 
 ## OCL behaviour this relies on
 
@@ -92,8 +96,9 @@ Mapping to OCL:
 
 ## Open items
 
-- [ ] Move `hierarchy_root_url` from the Source line to the post-import file
-- [ ] Decide the source's `canonical_url` (OCL's SNOMED GPS subset uses its own, not `http://snomed.info/sct`)
-- [ ] Import into OCL and verify
+- [x] Move `hierarchy_root_url` from the Source line to the post-import file
+- [x] Decide the source's `canonical_url`: keep `http://snomed.info/sct` (OCL's SNOMED GPS subset uses its own)
+- [x] Test import of 6 concepts into `SNOMED-CT-Vaccines-TEST`: 7 created, 0 errors, parents and two-parent concept correct
+- [ ] Import the full subset into OCL and verify
 - [ ] Hand over to Jon for vectorization
 - [ ] Cross-lingual testing needs Portuguese or Spanish terms (not in the International Edition)
