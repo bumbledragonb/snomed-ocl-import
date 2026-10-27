@@ -90,6 +90,30 @@ Mapping to OCL:
    The reply should contain `"hierarchy_root_url":"/orgs/HL7-Brasil/sources/SNOMED-CT-Vaccines/concepts/787859002/"`. Clear the terminal history afterwards (`history -c`).
 6. Upload `output/snomed_vaccines_ocl_post_import.jsonl` to create the source version. A version copies the hierarchy root from HEAD when it is created, so do this after step 5.
 
+## Verifying the import
+
+[verify_ocl_import.py](verify_ocl_import.py) compares the import files with what OCL actually holds, through the OCL API:
+
+| Checked | What |
+|---|---|
+| Source | name, description, visibility, canonical URL, locales, copyright, extras, hierarchy meaning and root |
+| HEAD concepts | every concept present and none extra; class, datatype, retired, external ID; every name (text, locale, preferred, type); extras; parent links |
+| Source Version | exists, and holds the same concepts, names, extras and parent links |
+
+```bash
+export OCL_TOKEN="your token"
+python verify_ocl_import.py
+unset OCL_TOKEN
+```
+
+It prints PASS or FAIL per check with the differences, and exits with 1 if anything fails. For the test source: `python verify_ocl_import.py --files output/test_snomed_vaccines_ocl --skip-version`.
+
+The checker has its own unit tests, which use made-up concepts and need no OCL access:
+
+```bash
+python -m unittest discover tests
+```
+
 ## OCL behaviour this relies on
 
 - The parallel importer links `parent_concept_urls` in a final reconciliation pass, after every line of the file has been processed, so concept order does not matter — but a Source Version in the same file would be created before the hierarchy exists. Hence the separate version file. (`oclapi2` `core/importers/models.py`, `BulkImportParallelRunner`)
