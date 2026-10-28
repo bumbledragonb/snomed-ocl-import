@@ -1,21 +1,3 @@
-"""Build an OCL bulk-import file for a SNOMED CT subset from an RF2 Snapshot release.
-
-Default subset: << 787859002 |Vaccine product (medicinal product)|
-
-Steps (same as the walkthrough):
-  1. Concept file       -> which concepts are active
-  2. Relationship file  -> is-a (116680003) links; walk down from the root
-  3. Description file   -> FSN and synonyms (active only)
-  4. Language refset    -> which synonym is Preferred in US / GB English
-  5. Relationship file  -> defining attributes (active ingredient, role, ...)
-  6. Write OCL JSON-lines (Source, Concepts with parent_concept_urls) + review CSV,
-     a post-import file (Source Version) to import once the first has finished, and print the
-     API PATCH that sets the hierarchy root in between
-
-Usage:
-  python snomed_vaccines_to_ocl.py <path to RF2 release folder>
-Only the Python standard library is needed.
-"""
 import argparse
 import collections
 import csv
@@ -35,7 +17,6 @@ HAS_ACTIVE_INGREDIENT = "127489000"
 
 
 def rf2(release, pattern):
-    """Yield active rows (as lists) of the single Snapshot file matching pattern."""
     files = glob.glob(os.path.join(release, "Snapshot", "**", pattern), recursive=True)
     if len(files) != 1:
         sys.exit(f"Expected one file matching {pattern}, found {files}")
@@ -65,12 +46,10 @@ def main():
     info = json.load(open(os.path.join(args.release, "release_package_information.json"), encoding="utf-8"))
     release_date = info.get("effectiveTime") or re.search(r"(\d{8})T", os.path.basename(os.path.normpath(args.release))).group(1)
 
-    # 1. Active concepts
     concept_rows = {r[0]: r for r in rf2(args.release, "sct2_Concept_Snapshot_*.txt")}
     if args.root not in concept_rows:
         sys.exit(f"Root {args.root} is not an active concept in this release")
 
-    # 2. Walk is-a links down from the root
     relationships = list(rf2(args.release, "sct2_Relationship_Snapshot_*.txt"))
     children = collections.defaultdict(set)
     for r in relationships:
@@ -90,7 +69,6 @@ def main():
         if r[7] == IS_A and r[4] in subset and r[5] in subset:
             parents[r[4]].append(r[5])
 
-    # 3. Descriptions (all concepts, so attribute targets can be named too)
     descriptions = {}
     fsn = {}
     for r in rf2(args.release, "sct2_Description_Snapshot-en_*.txt"):
@@ -99,7 +77,6 @@ def main():
         if r[4] in subset:
             descriptions[r[0]] = {"concept": r[4], "type": r[6], "term": r[7], "US": None, "GB": None}
 
-    # 4. Language refset: Preferred / Acceptable per dialect
     for r in rf2(args.release, "der2_cRefset_LanguageSnapshot-en_*.txt"):
         d = descriptions.get(r[5])
         if d and r[4] in (US, GB):
@@ -107,13 +84,12 @@ def main():
 
     terms = collections.defaultdict(list)
     for d in descriptions.values():
-        if d["US"] or d["GB"]:  # keep only descriptions used by a dialect
+        if d["US"] or d["GB"]:  
             terms[d["concept"]].append(d)
 
     def preferred(code, dialect):
         return next((d["term"] for d in terms[code] if d["type"] == SYNONYM and d[dialect] == "preferred"), None)
 
-    # 5. Defining attributes (non is-a relationships), plus concrete numeric values
     attributes = collections.defaultdict(list)
     for r in relationships:
         if r[4] in subset and r[7] != IS_A:
@@ -124,7 +100,6 @@ def main():
             attributes[r[4]].append({"group": int(r[6]), "type_id": r[7], "type": fsn.get(r[7]),
                                      "value": r[5].lstrip("#")})
 
-    # 6. OCL JSON-lines; parents are written before their children
     base = f"/orgs/{args.org}/sources/{args.source}/concepts"
     order, seen = [], set()
 
@@ -171,12 +146,7 @@ def main():
         if parents[code]:
             concept["parent_concept_urls"] = [f"{base}/{p}/" for p in sorted(parents[code])]
         lines.append(concept)
-    # The post-import file is imported only after the main import has finished: OCL's parallel
-    # importer links parent_concept_urls in a final reconciliation pass, after every line of the
-    # file, so a Source Version in the main file would be created before the hierarchy.
-    # hierarchy_root_url is not set here: the bulk importer drops it and never updates an existing
-    # Source, so it is set with an API PATCH (printed below) before the post-import file, so the
-    # version copies it from HEAD.
+    
     post_import = [
         {"type": "Source Version", "id": f"v{release_date}", "source": args.source,
          "owner": args.org, "owner_type": "Organization", "released": False,
@@ -199,7 +169,6 @@ def main():
                         " | ".join(f"{p} {preferred(p, 'US')}" for p in sorted(parents[code])),
                         " | ".join(a["value"] for a in attributes[code] if a["type_id"] == HAS_ACTIVE_INGREDIENT)])
 
-    # Validation report
     tags = collections.Counter(semantic_tag(fsn[c]) for c in subset)
     print(f"Release:               SNOMED CT International {release_date}", file=sys.stderr)
     print(f"Concepts:              {len(subset)}", file=sys.stderr)
