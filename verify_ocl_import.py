@@ -1,21 +1,3 @@
-"""Check that an OCL source contains exactly what the import files describe.
-
-Reads the files written by snomed_vaccines_to_ocl.py (what OCL should contain), fetches the
-source, its concepts and its version from the OCL API (what OCL does contain), and compares:
-
-  Source   name, description, visibility, canonical URL, locales, copyright, extras,
-           hierarchy meaning and hierarchy root
-  Concepts every concept present and nothing extra; class, datatype, retired, external ID,
-           every name (text, locale, preferred, type), extras, parent links
-  Version  exists, and holds the same concepts with the same names and parent links
-
-Usage (Git Bash; the token comes from your OCL profile and is never printed):
-  export OCL_TOKEN="your token"
-  python verify_ocl_import.py
-  unset OCL_TOKEN
-
-Exit code 0 when every check passes, 1 otherwise. Only the Python standard library is needed.
-"""
 import argparse
 import json
 import os
@@ -127,7 +109,6 @@ class OCL:
             if len(batch) < PAGE_SIZE:
                 return found
             page += 1
-
 
 def report(title, problems, show=20):
     print(f"{'PASS' if not problems else 'FAIL'} - {title}")
