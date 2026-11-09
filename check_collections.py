@@ -46,10 +46,10 @@ def from_file(path):
     return collections, members
 
 
-def from_ocl(api, org, token, ids, page_size):
+def from_ocl(api, org, token, ids, page_size, version=None):
     collections, members = {}, {}
     for cid in ids:
-        path = f"/orgs/{org}/collections/{cid}/"
+        path = f"/orgs/{org}/collections/{cid}/" + (f"{version}/" if version else "")
         try:
             collections[cid], _ = api_get(api, path, token, {"includeSummary": "true"})
         except urllib.error.HTTPError as e:
@@ -77,6 +77,7 @@ def main():
     ap.add_argument("--org", default="HL7-Brasil")
     ap.add_argument("--api", default="https://api.openconceptlab.org")
     ap.add_argument("--page-size", type=int, default=1000)
+    ap.add_argument("--version", help="Check this version of every collection (e.g. v20261001) instead of HEAD")
     ap.add_argument("--against-files", help="Check this folder's 04_collections.jsonl instead of OCL")
     args = ap.parse_args()
 
@@ -94,10 +95,10 @@ def main():
             sys.exit('Set your OCL API token first, in Git Bash: export OCL_TOKEN="your token"')
         print(f"Downloading the members of {len(names)} collections ...")
         try:
-            collections, members = from_ocl(args.api, args.org, token, names, args.page_size)
+            collections, members = from_ocl(args.api, args.org, token, names, args.page_size, args.version)
         except urllib.error.HTTPError as e:
             sys.exit(f"OCL API error {e.code} for {e.url}: {e.read().decode('utf-8', 'replace')[:300]}")
-        label = f"OCL /orgs/{args.org}/collections/"
+        label = f"OCL /orgs/{args.org}/collections/ ({args.version or 'HEAD'})"
 
     snomed = Snomed(args.release)
     want = expected_members(snomed, config)

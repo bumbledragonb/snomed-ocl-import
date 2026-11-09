@@ -297,6 +297,9 @@ def main():
     ap.add_argument("--save-mappings", default="output/snomed_ct/ocl_mappings.jsonl")
     ap.add_argument("--against-files", help="Check this folder's 02_concepts_part*.jsonl instead of OCL")
     args = ap.parse_args()
+    # Git Bash turns "/orgs/..." into "C:/Program Files/Git/orgs/..."; keep only the OCL path.
+    if "/orgs/" in args.repo:
+        args.repo = args.repo[args.repo.index("/orgs/"):]
 
     token = os.environ.get("OCL_TOKEN")
     if args.against_files:
