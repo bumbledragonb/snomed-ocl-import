@@ -1,0 +1,276 @@
+{
+  "description": "OCL collections for SNOMED CT Clinical finding, following SNOMED CT's own top level: one collection per direct child of 404684003 |Clinical finding| with at least 1000 concepts, named with its SNOMED CT fully specified name. Collections overlap, as SNOMED CT is polyhierarchical. Concepts under none of them go to 'Other clinical finding'.",
+  "collections": [
+    {
+      "id": "CF-disease",
+      "name": "Disease",
+      "roots": [
+        "64572001"
+      ]
+    },
+    {
+      "id": "CF-finding-of-trunk-structure",
+      "name": "Finding of trunk structure",
+      "roots": [
+        "302292003"
+      ]
+    },
+    {
+      "id": "CF-general-finding-of-soft-tissue",
+      "name": "General finding of soft tissue",
+      "roots": [
+        "248402002"
+      ]
+    },
+    {
+      "id": "CF-head-finding",
+      "name": "Head finding",
+      "roots": [
+        "406122000"
+      ]
+    },
+    {
+      "id": "CF-finding-of-limb-structure",
+      "name": "Finding of limb structure",
+      "roots": [
+        "302293008"
+      ]
+    },
+    {
+      "id": "CF-musculoskeletal-finding",
+      "name": "Musculoskeletal finding",
+      "roots": [
+        "106028002"
+      ]
+    },
+    {
+      "id": "CF-viscus-structure-finding",
+      "name": "Viscus structure finding",
+      "roots": [
+        "406123005"
+      ]
+    },
+    {
+      "id": "CF-mass-of-body-structure",
+      "name": "Mass of body structure",
+      "roots": [
+        "300848003"
+      ]
+    },
+    {
+      "id": "CF-functional-finding",
+      "name": "Functional finding",
+      "roots": [
+        "118228005"
+      ]
+    },
+    {
+      "id": "CF-skin-and-or-mucosa-finding",
+      "name": "Skin AND/OR mucosa finding",
+      "roots": [
+        "415531008"
+      ]
+    },
+    {
+      "id": "CF-procedure-related-finding",
+      "name": "Procedure related finding",
+      "roots": [
+        "127325009"
+      ]
+    },
+    {
+      "id": "CF-digestive-system-finding",
+      "name": "Digestive system finding",
+      "roots": [
+        "386617003"
+      ]
+    },
+    {
+      "id": "CF-integumentary-system-finding",
+      "name": "Integumentary system finding",
+      "roots": [
+        "106077005"
+      ]
+    },
+    {
+      "id": "CF-eye-vision-finding",
+      "name": "Eye / vision finding",
+      "roots": [
+        "118235002"
+      ]
+    },
+    {
+      "id": "CF-cardiovascular-finding",
+      "name": "Cardiovascular finding",
+      "roots": [
+        "106063007"
+      ]
+    },
+    {
+      "id": "CF-central-nervous-system-finding",
+      "name": "Central nervous system finding",
+      "roots": [
+        "246556002"
+      ]
+    },
+    {
+      "id": "CF-wound-finding",
+      "name": "Wound finding",
+      "roots": [
+        "225552003"
+      ]
+    },
+    {
+      "id": "CF-respiratory-finding",
+      "name": "Respiratory finding",
+      "roots": [
+        "106048009"
+      ]
+    },
+    {
+      "id": "CF-mental-state-behavior-and-or-psychosocia",
+      "name": "Mental state, behavior and/or psychosocial function finding",
+      "roots": [
+        "384821006"
+      ]
+    },
+    {
+      "id": "CF-ear-nose-and-throat-finding",
+      "name": "Ear, nose and throat finding",
+      "roots": [
+        "297268004"
+      ]
+    },
+    {
+      "id": "CF-finding-of-back",
+      "name": "Finding of back",
+      "roots": [
+        "414252009"
+      ]
+    },
+    {
+      "id": "CF-neurological-finding",
+      "name": "Neurological finding",
+      "roots": [
+        "102957003"
+      ]
+    },
+    {
+      "id": "CF-neurological-lesion",
+      "name": "Neurological lesion",
+      "roots": [
+        "299735001"
+      ]
+    },
+    {
+      "id": "CF-finding-of-movement",
+      "name": "Finding of movement",
+      "roots": [
+        "298325004"
+      ]
+    },
+    {
+      "id": "CF-finding-of-neck-region",
+      "name": "Finding of neck region",
+      "roots": [
+        "298378000"
+      ]
+    },
+    {
+      "id": "CF-finding-by-method",
+      "name": "Finding by method",
+      "roots": [
+        "118240005"
+      ]
+    },
+    {
+      "id": "CF-hypersensitivity-condition",
+      "name": "Hypersensitivity condition",
+      "roots": [
+        "473010000"
+      ]
+    },
+    {
+      "id": "CF-muscle-finding",
+      "name": "Muscle finding",
+      "roots": [
+        "106030000"
+      ]
+    },
+    {
+      "id": "CF-pregnancy-childbirth-and-puerperium-find",
+      "name": "Pregnancy, childbirth and puerperium finding",
+      "roots": [
+        "248982007"
+      ]
+    },
+    {
+      "id": "CF-deformity",
+      "name": "Deformity",
+      "roots": [
+        "417893002"
+      ]
+    },
+    {
+      "id": "CF-ear-and-auditory-finding",
+      "name": "Ear and auditory finding",
+      "roots": [
+        "118236001"
+      ]
+    },
+    {
+      "id": "CF-administrative-statuses",
+      "name": "Administrative statuses",
+      "roots": [
+        "307824009"
+      ]
+    },
+    {
+      "id": "CF-bleeding",
+      "name": "Bleeding",
+      "roots": [
+        "131148009"
+      ]
+    },
+    {
+      "id": "CF-finding-of-blood-lymphatics-and-immune-s",
+      "name": "Finding of blood, lymphatics and immune system",
+      "roots": [
+        "299691001"
+      ]
+    },
+    {
+      "id": "CF-propensity-to-adverse-reaction",
+      "name": "Propensity to adverse reaction",
+      "roots": [
+        "420134006"
+      ]
+    },
+    {
+      "id": "CF-speech-finding",
+      "name": "Speech finding",
+      "roots": [
+        "106132005"
+      ]
+    },
+    {
+      "id": "CF-device-finding",
+      "name": "Device finding",
+      "roots": [
+        "1156072000"
+      ]
+    },
+    {
+      "id": "CF-finding-of-structures-of-conception",
+      "name": "Finding of structures of conception",
+      "roots": [
+        "289262005"
+      ]
+    }
+  ],
+  "rest": {
+    "id": "CF-other-clinical-finding",
+    "name": "Other clinical finding",
+    "within": "404684003"
+  }
+}
