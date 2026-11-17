@@ -212,9 +212,12 @@ def fetch_one(api, repo, token, code):
 
 # ---------- comparison ----------
 
-def check_membership(snomed, loaded_root, in_ocl):
+def check_membership(snomed, loaded_roots, in_ocl):
+    """loaded_roots: comma-separated roots of the hierarchies that were loaded."""
     problems = collections.defaultdict(list)
-    core = snomed.descendants(loaded_root) | {loaded_root}
+    core = set()
+    for root in loaded_roots.split(","):
+        core |= snomed.descendants(root) | {root}
     for code in sorted(core - in_ocl):
         problems["descendant of the root missing from OCL"].append(code)
     for code in sorted(in_ocl - snomed.concepts.keys()):
@@ -287,7 +290,7 @@ def show(title, problems, examples=5):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("release", help="RF2 release folder (the one containing Snapshot/)")
-    ap.add_argument("--root", default="404684003", help="The hierarchy that was loaded")
+    ap.add_argument("--root", default="404684003", help="The hierarchies that were loaded, comma-separated (e.g. 404684003,243796009)")
     ap.add_argument("--repo", default="/orgs/HL7-Brasil/sources/SNOMED-CT/")
     ap.add_argument("--api", default="https://api.openconceptlab.org")
     ap.add_argument("--page-size", type=int, default=1000)
@@ -356,7 +359,7 @@ def main():
         core, membership = check_membership(snomed, args.root, set(ocl))
 
     print(f"\nChecking {label} against SNOMED CT")
-    print(f"       {len(ocl):,} concepts: {len(core & set(ocl)):,} in the {args.root} hierarchy, "
+    print(f"       {len(ocl):,} concepts: {len(core & set(ocl)):,} in the {args.root} hierarchies, "
           f"{len(set(ocl) - core):,} ancestors and relationship targets outside it\n")
     results = [show("Membership: the right concepts, none missing, none extra", membership),
                show("Every concept: class, names, parents and extras match SNOMED", check_concepts(snomed, ocl)),

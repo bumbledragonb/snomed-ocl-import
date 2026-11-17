@@ -22,6 +22,10 @@ Files written to --out, imported in this order (see the printed instructions):
 
 Usage:
   python snomed_to_ocl.py <RF2 release folder> --roots 404684003 --collections collections/clinical_findings.json
+
+Adding another hierarchy to a source that is already loaded (only new concepts and their relationships):
+  python snomed_to_ocl.py <RF2 release folder> --roots 243796009 --collections collections/situations.json \
+      --already-loaded output/snomed_ct/ocl_concepts.jsonl --previous-roots 404684003 --version v20261001.2 --out output/snomed_situations
 """
 import argparse
 import collections
@@ -91,6 +95,10 @@ def main():
     ap.add_argument("--mappings-per-file", type=int, default=100000)
     ap.add_argument("--only", help="Comma-separated SCTIDs: keep only these (plus targets and ancestors), for a test")
     ap.add_argument("--out", default="output/snomed_ct")
+    ap.add_argument("--already-loaded", help="JSON-lines file of concepts already in the OCL source (e.g. downloaded by "
+                    "check_ocl_against_snomed.py): those concepts and their relationships are left out, and no Source line is written")
+    ap.add_argument("--previous-roots", default="", help="Comma-separated roots loaded earlier, named in the source description")
+    ap.add_argument("--version", help="Source Version id (default v<release date>)")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
 
@@ -146,17 +154,25 @@ def main():
         return re.sub(r"\s*\([^()]+\)$", "", fsn[code])
 
     base = f"/orgs/{args.org}/sources/{args.source}/concepts"
+    all_roots = [r for r in args.previous_roots.split(",") if r] + args.roots.split(",")
+    # Concepts already in OCL (from an earlier load) are not written again, and neither are their
+    # relationships: they were loaded with them. New concepts may still have them as parents or targets.
+    loaded = set()
+    if args.already_loaded:
+        loaded = {json.loads(line)["id"] for line in open(args.already_loaded, encoding="utf-8")}
+    new = subset - loaded
+    version_id = args.version or f"v{release_date}"
     source = {
         "type": "Source", "id": args.source, "short_code": args.source,
         "name": "SNOMED CT (HL7 Brasil)", "full_name": "SNOMED CT International Edition (subset loaded by HL7 Brasil)",
         "owner": args.org, "owner_type": "Organization",
-        "description": f"SNOMED CT International Edition {release_date} (RF2 Snapshot): {', '.join(label(r) for r in args.roots.split(','))}, "
+        "description": f"SNOMED CT International Edition {release_date} (RF2 Snapshot): {', '.join(label(r) for r in all_roots)}, "
                        "with every concept their relationships point to and all ancestors. Relationships other than is-a are mappings.",
         "source_type": "External", "public_access": "None",
         "default_locale": "en", "supported_locales": ["en"], "custom_validation_schema": "None",
         "canonical_url": "http://snomed.info/sct", "hierarchy_meaning": "is-a",
         "copyright": "SNOMED CT content (c) SNOMED International. Use requires an appropriate SNOMED CT license.",
-        "extras": {"snomed_edition": "International", "snomed_release": release_date, "loaded_roots": args.roots.split(",")},
+        "extras": {"snomed_edition": "International", "snomed_release": release_date, "loaded_roots": all_roots},
     }
 
     # 4. Concepts, parents first
@@ -164,6 +180,8 @@ def main():
     no_preferred = []
     concept_lines = []
     for code in order:
+        if code in loaded:
+            continue
         us_pt = preferred(code) or label(code)
         if not preferred(code):
             no_preferred.append(code)
@@ -191,6 +209,8 @@ def main():
     # relationship id, so each role group can still be rebuilt. The mapping keeps the first relationship's id.
     mapping_lines, skipped, merged = [], collections.Counter(), 0
     for code in order:
+        if code in loaded:
+            continue
         by_pair = {}
         for r in sorted(relationships[code], key=lambda r: (int(r[6]), r[7], r[5])):
             if r[5] not in subset:
@@ -236,7 +256,8 @@ def main():
                                   "description": f"SNOMED CT {release_date}: {name}, {len(codes)} concepts"})
 
     # 7. Write files
-    write_jsonl(os.path.join(args.out, "01_source.jsonl"), [source])
+    if not loaded:
+        write_jsonl(os.path.join(args.out, "01_source.jsonl"), [source])
     concept_files = chunks(concept_lines, args.concepts_per_file)
     for i, part in enumerate(concept_files, 1):
         write_jsonl(os.path.join(args.out, f"02_concepts_part{i:02d}.jsonl"), part)
@@ -245,9 +266,10 @@ def main():
         write_jsonl(os.path.join(args.out, f"03_mappings_part{i:02d}.jsonl"), part)
     if collection_lines:
         write_jsonl(os.path.join(args.out, "04_collections.jsonl"), collection_lines)
-    version_lines.insert(0, {"type": "Source Version", "id": f"v{release_date}", "source": args.source,
+    version_lines.insert(0, {"type": "Source Version", "id": version_id, "source": args.source,
                              "owner": args.org, "owner_type": "Organization", "released": False,
-                             "description": f"SNOMED CT International {release_date}: {len(subset)} concepts, {len(mapping_lines)} relationships"})
+                             "description": f"SNOMED CT International {release_date}: {', '.join(label(r) for r in all_roots)} "
+                                            f"({len(loaded | subset)} concepts)"})
     write_jsonl(os.path.join(args.out, "05_versions.jsonl"), version_lines)
 
     in_collections = collections.defaultdict(list)
@@ -268,7 +290,10 @@ def main():
     def size(path): return os.path.getsize(path) / 2**20
     print(f"Release SNOMED CT International {release_date}")
     print(f"Concepts: {len(subset):,} ({len(core):,} in the hierarchies, {len(subset) - len(core):,} relationship targets and ancestors)")
-    print(f"Semantic tags: {dict(collections.Counter(semantic_tag(fsn[c]) for c in subset).most_common(8))}")
+    if loaded:
+        print(f"Already in OCL: {len(subset & loaded):,} of them | new, written to the files: {len(new):,} "
+              f"(source will hold {len(loaded | subset):,})")
+    print(f"Semantic tags of new concepts: {dict(collections.Counter(semantic_tag(fsn[c]) for c in new).most_common(8))}")
     print(f"is-a links: {sum(len(l.get('parent_concept_urls', [])) for l in concept_lines):,} | orphans: {orphans or 'none'}")
     print(f"Relationship mappings: {len(mapping_lines):,} ({len(mapping_lines) + merged:,} relationships, {merged:,} repeats in "
           f"other role groups merged) | skipped (target not loaded): {sum(skipped.values()):,} {dict(skipped.most_common(5))}")
@@ -276,7 +301,7 @@ def main():
     for cid, (name, codes) in members.items():
         print(f"  collection {cid:28} {len(codes):7,}  {name}")
     print("\nImport in this order, waiting for each to finish (OCL Bulk Import, Hierarchy ticked for concept files):")
-    print(f"  1. 01_source.jsonl")
+    print("  1. 01_source.jsonl" if not loaded else "  1. (source exists: no source file)")
     for i in range(1, len(concept_files) + 1):
         p = os.path.join(args.out, f"02_concepts_part{i:02d}.jsonl")
         print(f"  {i + 1}. {os.path.basename(p)}  ({size(p):.0f} MiB)")
@@ -287,10 +312,13 @@ def main():
         n += 1
     if collection_lines:
         print(f"  {n}. 04_collections.jsonl"); n += 1
-    print(f"  {n}. Set the hierarchy root with the API:")
+    patch = {"hierarchy_root_url": f"{base}/{SNOMED_ROOT}/"}
+    if loaded:  # the root is already set; describe the hierarchies now loaded
+        patch = {"description": source["description"], "extras": source["extras"]}
+    print(f"  {n}. {'Set the hierarchy root' if not loaded else 'Update the source description'} with the API:")
     print(f'     curl -s -X PATCH "https://api.openconceptlab.org/orgs/{args.org}/sources/{args.source}/" '
           f'-H "Authorization: Token $OCL_TOKEN" -H "Content-Type: application/json" '
-          f"-d '{{\"hierarchy_root_url\": \"{base}/{SNOMED_ROOT}/\"}}'")
+          f"-d '{json.dumps(patch)}'")
     print(f"  {n + 1}. 05_versions.jsonl")
 
 

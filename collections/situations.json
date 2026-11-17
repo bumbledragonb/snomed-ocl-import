@@ -1,0 +1,31 @@
+{
+  "description": "Situation with explicit context (243796009) grouped by its three large SNOMED CT branches, plus every other situation in 'Other situation with explicit context'.",
+  "collections": [
+    {
+      "id": "SIT-procedure-with-explicit-context",
+      "name": "Procedure with explicit context",
+      "roots": [
+        "129125009"
+      ]
+    },
+    {
+      "id": "SIT-finding-with-explicit-context",
+      "name": "Finding with explicit context",
+      "roots": [
+        "413350009"
+      ]
+    },
+    {
+      "id": "SIT-family-history-with-explicit-context",
+      "name": "Family history with explicit context",
+      "roots": [
+        "57177007"
+      ]
+    }
+  ],
+  "rest": {
+    "id": "SIT-other-situation",
+    "name": "Other situation with explicit context",
+    "within": "243796009"
+  }
+}
