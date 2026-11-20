@@ -1,0 +1,66 @@
+{
+  "description": "Procedure (71388002) grouped by its direct SNOMED CT children with at least 1000 concepts, plus every other procedure in 'Other procedure'.",
+  "collections": [
+    {
+      "id": "PR-procedure-by-method",
+      "name": "Procedure by method",
+      "roots": [
+        "128927009"
+      ]
+    },
+    {
+      "id": "PR-procedure-by-site",
+      "name": "Procedure by site",
+      "roots": [
+        "362958002"
+      ]
+    },
+    {
+      "id": "PR-surgical-procedure",
+      "name": "Surgical procedure",
+      "roots": [
+        "387713003"
+      ]
+    },
+    {
+      "id": "PR-procedure-by-intent",
+      "name": "Procedure by intent",
+      "roots": [
+        "362961001"
+      ]
+    },
+    {
+      "id": "PR-laboratory-procedure",
+      "name": "Laboratory procedure",
+      "roots": [
+        "108252007"
+      ]
+    },
+    {
+      "id": "PR-regimes-and-therapies",
+      "name": "Regimes and therapies",
+      "roots": [
+        "243120004"
+      ]
+    },
+    {
+      "id": "PR-administrative-procedure",
+      "name": "Administrative procedure",
+      "roots": [
+        "14734007"
+      ]
+    },
+    {
+      "id": "PR-cannula-or-catheter-procedure",
+      "name": "Cannula or catheter procedure",
+      "roots": [
+        "1344997009"
+      ]
+    }
+  ],
+  "rest": {
+    "id": "PR-other-procedure",
+    "name": "Other procedure",
+    "within": "71388002"
+  }
+}
