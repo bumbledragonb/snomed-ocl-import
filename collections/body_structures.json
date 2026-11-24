@@ -1,0 +1,108 @@
+{
+  "description": "Body structure (123037004) grouped by SNOMED CT body system (children of 91689009 |Body system structure|), plus morphologic abnormalities and cell structures, and every other body structure in 'Other body structure'.",
+  "collections": [
+    {
+      "id": "BS-musculoskeletal-system",
+      "name": "Structure of musculoskeletal system",
+      "roots": [
+        "26107004"
+      ]
+    },
+    {
+      "id": "BS-cardiovascular-system",
+      "name": "Structure of cardiovascular system",
+      "roots": [
+        "113257007"
+      ]
+    },
+    {
+      "id": "BS-nervous-system",
+      "name": "Structure of nervous system",
+      "roots": [
+        "25087005"
+      ]
+    },
+    {
+      "id": "BS-digestive-system",
+      "name": "Structure of digestive system",
+      "roots": [
+        "86762007"
+      ]
+    },
+    {
+      "id": "BS-special-senses-organ-system",
+      "name": "Structure of special senses organ system",
+      "roots": [
+        "57645008"
+      ]
+    },
+    {
+      "id": "BS-integumentary-system",
+      "name": "Structure of integumentary system",
+      "roots": [
+        "48075008"
+      ]
+    },
+    {
+      "id": "BS-genitourinary-system",
+      "name": "Structure of genitourinary system",
+      "roots": [
+        "21514008"
+      ]
+    },
+    {
+      "id": "BS-respiratory-system",
+      "name": "Structure of respiratory system",
+      "roots": [
+        "20139000"
+      ]
+    },
+    {
+      "id": "BS-lymphoreticular-system",
+      "name": "Structure of lymphoreticular system",
+      "roots": [
+        "245255009"
+      ]
+    },
+    {
+      "id": "BS-hematological-system",
+      "name": "Structure of hematological system",
+      "roots": [
+        "414387006"
+      ]
+    },
+    {
+      "id": "BS-immune-system",
+      "name": "Structure of immune system",
+      "roots": [
+        "116003000"
+      ]
+    },
+    {
+      "id": "BS-endocrine-system",
+      "name": "Structure of endocrine system",
+      "roots": [
+        "113331007"
+      ]
+    },
+    {
+      "id": "BS-morphologic-abnormality",
+      "name": "Body structure, altered from its original anatomical structure",
+      "roots": [
+        "118956008"
+      ]
+    },
+    {
+      "id": "BS-cell-structure",
+      "name": "Cell structure",
+      "roots": [
+        "4421005"
+      ]
+    }
+  ],
+  "rest": {
+    "id": "BS-other-body-structure",
+    "name": "Other body structure",
+    "within": "123037004"
+  }
+}
