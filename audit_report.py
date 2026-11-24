@@ -33,18 +33,21 @@ def joined(values):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("release")
-    ap.add_argument("--root", default="404684003")
+    ap.add_argument("--root", default="404684003", help="The hierarchies that were loaded, comma-separated")
     ap.add_argument("--repo", default="/orgs/HL7-Brasil/sources/SNOMED-CT/")
     ap.add_argument("--concepts", default="output/snomed_ct/ocl_concepts.jsonl")
     ap.add_argument("--mappings", default="output/snomed_ct/ocl_mappings.jsonl")
     ap.add_argument("--out", default="output/audit")
     args = ap.parse_args()
+    if ":/" in args.repo and "/orgs/" in args.repo:  # Git Bash turns /orgs/... into C:/Program Files/Git/orgs/...
+        args.repo = args.repo[args.repo.index("/orgs/"):]
     os.makedirs(args.out, exist_ok=True)
 
     ocl = {c["id"]: c for c in map(json.loads, open(args.concepts, encoding="utf-8"))}
     mappings = [json.loads(line) for line in open(args.mappings, encoding="utf-8")]
     snomed = Snomed(args.release)
-    core = snomed.descendants(args.root) | {args.root}
+    roots = [r.strip() for r in args.root.split(",") if r.strip()]
+    core = set(roots).union(*(snomed.descendants(r) for r in roots))
     # What should be loaded: the hierarchy plus, repeatedly, every relationship target and every ancestor
     expected = set(core)
     while True:
