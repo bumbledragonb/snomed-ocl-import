@@ -3,6 +3,7 @@
 The expected members are worked out again from the RF2 release and the collection definitions
 (collections/clinical_findings.json), not taken from the import file:
   - a collection with roots holds every root and every active descendant of a root
+    (only those whose FSN semantic tag is listed, when the collection has "semantic_tags")
   - the "rest" collection holds every concept in its 'within' hierarchy that no other collection holds
 It also checks each collection exists in OCL as a Value Set with the right name and canonical URL.
 
@@ -20,12 +21,16 @@ import sys
 import urllib.error
 
 from check_ocl_against_snomed import Snomed, api_get, last_segment, show
+from snomed_vaccines_to_ocl import semantic_tag
 
 
 def expected_members(snomed, config):
     def subtree(code):
         return snomed.descendants(code) | {code}
-    members = {c["id"]: set().union(*(subtree(r) for r in c["roots"])) for c in config["collections"]}
+    def tagged(c, codes):
+        tags = c.get("semantic_tags")
+        return {x for x in codes if semantic_tag(snomed.fsn[x]) in tags} if tags else codes
+    members = {c["id"]: tagged(c, set().union(*(subtree(r) for r in c["roots"]))) for c in config["collections"]}
     rest = config.get("rest")
     if rest:
         members[rest["id"]] = subtree(rest["within"]) - set().union(*members.values())

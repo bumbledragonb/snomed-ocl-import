@@ -235,7 +235,10 @@ def main():
     if args.collections:
         config = json.load(open(args.collections, encoding="utf-8"))
         for c in config["collections"]:
-            members[c["id"]] = (c["name"], set().union(*(descendants(r, children) for r in c["roots"])) & core)
+            codes = set().union(*(descendants(r, children) for r in c["roots"])) & core
+            if c.get("semantic_tags"):  # keep only concepts whose FSN ends in one of these tags
+                codes = {x for x in codes if semantic_tag(fsn[x]) in c["semantic_tags"]}
+            members[c["id"]] = (c["name"], codes)
         if config.get("rest"):
             rest = config["rest"]
             covered = set().union(*(m for _, m in members.values()))

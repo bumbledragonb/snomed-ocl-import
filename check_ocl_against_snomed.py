@@ -34,6 +34,11 @@ Usage (Git Bash, from the project folder; the token is never printed):
 The concepts downloaded from OCL are saved to output/snomed_ct/ocl_concepts.jsonl; add --cached to
 check that copy again without downloading. --against-files checks the import files instead of OCL
 (no token needed). Only the Python standard library is needed.
+
+Large sources: a download that stops part way (connection or OCL server trouble) carries on from where it
+stopped when the same command is run again. If OCL keeps failing on the deep pages of the mapping list,
+download the version's export from its page in OCL (the download icon on the Versions tab) and pass
+--export <zip> --cached-concepts to read the mappings from it instead.
 """
 import argparse
 import collections
@@ -42,6 +47,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -98,10 +104,10 @@ class Snomed:
             else:
                 self.targets[r[4]].add(r[5])
                 self.relationships[r[0]] = (r[4], r[7], r[5], int(r[6]))
-        # concrete value: id effectiveTime active moduleId sourceId value relationshipGroup typeId ...
+        # concrete value: id effectiveTime active moduleId sourceId value relationshipGroup typeId ... (kept per role group)
         self.concrete = collections.defaultdict(set)
         for r in active_rows(release, "sct2_RelationshipConcreteValues_Snapshot_*.txt"):
-            self.concrete[r[4]].add((r[7], r[5].lstrip("#")))
+            self.concrete[r[4]].add((int(r[6]), r[7], r[5].lstrip("#")))
         # description: id effectiveTime active moduleId conceptId languageCode typeId term ...
         self.fsn, self.synonyms = {}, collections.defaultdict(dict)
         for r in active_rows(release, "sct2_Description_Snapshot-en_*.txt"):
@@ -172,31 +178,110 @@ def as_found(concept):
         "effective_time": extras.get("snomed_effective_time"), "module": extras.get("snomed_module"),
         "definition_status": extras.get("snomed_definition_status"),
         "gb_preferred": extras.get("snomed_gb_preferred_term"),
-        "concrete": sorted((v["type_id"], str(v["value"])) for v in extras.get("snomed_concrete_values") or []),
+        "concrete": sorted((int(v["group"]), v["type_id"], str(v["value"])) for v in extras.get("snomed_concrete_values") or []),
     }
 
 
-def api_get(api, path, token, params):
+def api_get(api, path, token, params, attempts=8):
+    """GET from the OCL API, retrying when the connection drops or OCL has a temporary server error."""
     url = f"{api}{path}?{urllib.parse.urlencode(params)}"
     request = urllib.request.Request(url, headers={"Authorization": f"Token {token}", "Accept": "application/json"})
-    with urllib.request.urlopen(request, timeout=300) as response:
-        return json.load(response), response.headers
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=300) as response:
+                return json.load(response), response.headers
+        except urllib.error.HTTPError as e:
+            if e.code < 500 or attempt == attempts:
+                raise
+            problem = f"OCL server error {e.code}"
+        except (urllib.error.URLError, OSError, ValueError) as e:  # no connection, timeout, cut-off response
+            if attempt == attempts:
+                raise
+            problem = f"connection problem ({getattr(e, 'reason', e)})"
+        wait = min(15 * attempt, 120)
+        print(f"\n  {problem}, trying again in {wait} s (attempt {attempt + 1} of {attempts}) ...", flush=True)
+        time.sleep(wait)
 
 
-def download(api, repo, token, page_size, kind="concepts"):
-    """Every concept (with names, extras and parent links) or every mapping in the source (HEAD)."""
+def download(api, repo, token, page_size, kind="concepts", progress=None):
+    """Every concept (with names, extras and parent links) or every mapping in the source (HEAD).
+
+    With progress (a file path), each page is kept as it arrives, so a download that stops part way
+    (connection or OCL server trouble) carries on from the next page when run again with the same settings.
+    """
     found, page, total = {}, 1, None
     params = {"verbose": "true", "includeParentConceptURLs": "true", "includeRetired": "true", "limit": page_size}
-    while True:
-        batch, headers = api_get(api, f"{repo}{kind}/", token, {**params, "page": page})
-        total = int(headers.get("num_found") or total or 0)
-        for item in batch:
-            found[item["id"]] = item
-        print(f"\r  downloaded {len(found):,} of {total:,} {kind}", end="", flush=True)
-        if not batch or len(found) >= total:
-            print()
-            return found
-        page += 1
+    marker = json.dumps({"repo": repo, "kind": kind, "page_size": page_size})
+    if progress and os.path.exists(progress):
+        with open(progress, encoding="utf-8") as f:
+            if f.readline().rstrip("\n") == marker:
+                for line in f:
+                    record = json.loads(line)
+                    if "page_done" in record:
+                        page, total = record["page_done"] + 1, record["total"]
+                    else:
+                        found[record["id"]] = record
+        if page > 1:
+            print(f"  carrying on from page {page} ({len(found):,} {kind} kept from last time)")
+        else:
+            found = {}
+    out = None
+    if progress:
+        os.makedirs(os.path.dirname(progress) or ".", exist_ok=True)
+        out = open(progress, "a" if page > 1 else "w", encoding="utf-8")
+        if page == 1:
+            out.write(marker + "\n")
+    try:
+        while True:
+            batch, headers = api_get(api, f"{repo}{kind}/", token, {**params, "page": page})
+            total = int(headers.get("num_found") or total or 0)
+            for item in batch:
+                found[item["id"]] = item
+                if out:
+                    out.write(json.dumps(item, ensure_ascii=False) + "\n")
+            if out:
+                out.write(json.dumps({"page_done": page, "total": total}) + "\n")
+                out.flush()
+            print(f"\r  downloaded {len(found):,} of {total:,} {kind}", end="", flush=True)
+            if not batch or len(found) >= total:
+                print()
+                break
+            page += 1
+    finally:
+        if out:
+            out.close()
+    if progress:
+        os.remove(progress)
+    return found
+
+
+def mappings_from_export(path):
+    """The mappings in an OCL version export (the .zip or .json downloaded from the version's page)."""
+    import zipfile
+    if zipfile.is_zipfile(path):
+        with zipfile.ZipFile(path) as z:
+            name = next(n for n in z.namelist() if n.lower().endswith(".json"))
+            with z.open(name) as f:
+                export = json.load(f)
+    else:
+        with open(path, encoding="utf-8") as f:
+            export = json.load(f)
+    print(f"  export of {export.get('owner', '?')}/{export.get('short_code') or export.get('mnemonic') or '?'} "
+          f"version {export.get('id') or export.get('version', '?')}: {len(export.get('concepts') or []):,} concepts, "
+          f"{len(export.get('mappings') or []):,} mappings")
+    mappings = export.get("mappings")
+    if not isinstance(mappings, list):
+        sys.exit(f"{path} has no list of mappings; is it an OCL version export?")
+    for m in mappings:
+        # Use the concept codes when the export gives them: its URLs can point to concept versions.
+        for side in ("from", "to"):
+            code = m.get(f"{side}_concept_code")
+            if code:
+                m[f"{side}_concept_url"] = f"/concepts/{code}/"
+        missing = {"id", "map_type", "from_concept_url", "to_concept_url"} - set(m)
+        if missing:
+            sys.exit(f"Mappings in {path} lack {sorted(missing)}; cannot check them from this file.")
+    return mappings
 
 
 def fetch_one(api, repo, token, code):
@@ -296,6 +381,8 @@ def main():
     ap.add_argument("--page-size", type=int, default=1000)
     ap.add_argument("--save", default="output/snomed_ct/ocl_concepts.jsonl", help="Where to keep the downloaded concepts")
     ap.add_argument("--cached", action="store_true", help="Check the concepts (and mappings) downloaded last time")
+    ap.add_argument("--export", help="Read the mappings from this OCL version export (.zip or .json) instead of the API")
+    ap.add_argument("--cached-concepts", action="store_true", help="Check the concepts downloaded last time, but download the mappings")
     ap.add_argument("--mappings", action="store_true", help="Also check the relationships (OCL mappings)")
     ap.add_argument("--save-mappings", default="output/snomed_ct/ocl_mappings.jsonl")
     ap.add_argument("--against-files", help="Check this folder's 02_concepts_part*.jsonl instead of OCL")
@@ -312,7 +399,7 @@ def main():
                 c = json.loads(line)
                 ocl[c["id"]] = c
         label = f"import files in {args.against_files}"
-    elif args.cached:
+    elif args.cached or args.cached_concepts:
         ocl = {c["id"]: c for c in map(json.loads, open(args.save, encoding="utf-8"))}
         label = f"OCL concepts saved in {args.save}"
     else:
@@ -320,7 +407,7 @@ def main():
             sys.exit('Set your OCL API token first, in Git Bash: export OCL_TOKEN="your token"')
         print(f"Downloading every concept in {args.repo} ...")
         try:
-            ocl = download(args.api, args.repo, token, args.page_size)
+            ocl = download(args.api, args.repo, token, args.page_size, progress=args.save + ".partial")
         except urllib.error.HTTPError as e:
             sys.exit(f"OCL API error {e.code} for {e.url}: {e.read().decode('utf-8', 'replace')[:300]}")
         os.makedirs(os.path.dirname(args.save), exist_ok=True)
@@ -333,12 +420,16 @@ def main():
     if args.mappings and args.against_files:
         mappings = [json.loads(line) for path in sorted(glob.glob(os.path.join(args.against_files, "03_mappings_part*.jsonl")))
                     for line in open(path, encoding="utf-8")]
+    elif args.mappings and args.export:
+        print(f"Reading the mappings from {args.export} ...")
+        mappings = mappings_from_export(args.export)
     elif args.mappings and args.cached:
         mappings = [json.loads(line) for line in open(args.save_mappings, encoding="utf-8")]
     elif args.mappings:
         print(f"Downloading every mapping in {args.repo} ...")
         try:
-            mappings = list(download(args.api, args.repo, token, args.page_size, "mappings").values())
+            mappings = list(download(args.api, args.repo, token, args.page_size, "mappings",
+                                     progress=args.save_mappings + ".partial").values())
         except urllib.error.HTTPError as e:
             sys.exit(f"OCL API error {e.code} for {e.url}: {e.read().decode('utf-8', 'replace')[:300]}")
         with open(args.save_mappings, "w", encoding="utf-8") as f:

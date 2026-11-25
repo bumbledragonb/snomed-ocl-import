@@ -1,0 +1,28 @@
+{
+  "description": "Pharmaceutical / biologic product (373873005) grouped by product type, using the FSN semantic tag: medicinal products, medicinal product forms and clinical drugs, and every other product (vaccine groupers, blood products, allergens, dietary products and so on) in 'Other pharmaceutical / biologic product'.",
+  "collections": [
+    {
+      "id": "PP-medicinal-product",
+      "name": "Medicinal product",
+      "roots": ["373873005"],
+      "semantic_tags": ["medicinal product"]
+    },
+    {
+      "id": "PP-medicinal-product-form",
+      "name": "Medicinal product form",
+      "roots": ["373873005"],
+      "semantic_tags": ["medicinal product form"]
+    },
+    {
+      "id": "PP-clinical-drug",
+      "name": "Clinical drug",
+      "roots": ["373873005"],
+      "semantic_tags": ["clinical drug"]
+    }
+  ],
+  "rest": {
+    "id": "PP-other-product",
+    "name": "Other pharmaceutical / biologic product",
+    "within": "373873005"
+  }
+}
