@@ -1,0 +1,89 @@
+{
+  "description": "Substance (105590001) grouped by its top-level SNOMED CT groupings (the children of 105590001). Substances often sit in several groupings, so the collections overlap. Every substance below the root is in at least one of them.",
+  "collections": [
+    {
+      "id": "SUB-structure",
+      "name": "Substance categorized by structure",
+      "roots": [
+        "312413002"
+      ]
+    },
+    {
+      "id": "SUB-biological",
+      "name": "Biological substance",
+      "roots": [
+        "115668003"
+      ]
+    },
+    {
+      "id": "SUB-disposition",
+      "name": "Substance categorized by disposition",
+      "roots": [
+        "766739005"
+      ]
+    },
+    {
+      "id": "SUB-drug-or-medicament",
+      "name": "Drug or medicament",
+      "roots": [
+        "410942007"
+      ]
+    },
+    {
+      "id": "SUB-material",
+      "name": "Material",
+      "roots": [
+        "260769002"
+      ]
+    },
+    {
+      "id": "SUB-edible",
+      "name": "Edible substance",
+      "roots": [
+        "762766007"
+      ]
+    },
+    {
+      "id": "SUB-functional",
+      "name": "Substance categorized functionally",
+      "roots": [
+        "312412007"
+      ]
+    },
+    {
+      "id": "SUB-body-substance",
+      "name": "Body substance",
+      "roots": [
+        "91720002"
+      ]
+    },
+    {
+      "id": "SUB-physical-state",
+      "name": "Substance categorized by physical state",
+      "roots": [
+        "115669006"
+      ]
+    },
+    {
+      "id": "SUB-diagnostic",
+      "name": "Diagnostic substance",
+      "roots": [
+        "373782009"
+      ]
+    },
+    {
+      "id": "SUB-biocide",
+      "name": "Biocide",
+      "roots": [
+        "255640000"
+      ]
+    },
+    {
+      "id": "SUB-hazard",
+      "name": "Substance categorized by hazard characteristics",
+      "roots": [
+        "438951008"
+      ]
+    }
+  ]
+}
