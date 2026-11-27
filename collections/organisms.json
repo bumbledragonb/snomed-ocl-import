@@ -1,0 +1,60 @@
+{
+  "description": "Organism (410607006) grouped by domain and kingdom: bacteria, animals, fungi, plants, protozoa, viruses and archaea. Everything else (prions, chromists, slime molds and organism groupers) is in 'Other organism'.",
+  "collections": [
+    {
+      "id": "ORG-bacteria",
+      "name": "Bacteria",
+      "roots": [
+        "409822003"
+      ]
+    },
+    {
+      "id": "ORG-animal",
+      "name": "Animal (Kingdom Animalia)",
+      "roots": [
+        "387961004"
+      ]
+    },
+    {
+      "id": "ORG-fungus",
+      "name": "Fungus (Kingdom Fungi)",
+      "roots": [
+        "414561005"
+      ]
+    },
+    {
+      "id": "ORG-plant",
+      "name": "Plant (Kingdom Plantae and Viridiplantae)",
+      "roots": [
+        "31006001",
+        "417377004"
+      ]
+    },
+    {
+      "id": "ORG-protozoa",
+      "name": "Protozoa (Kingdom Protozoa)",
+      "roots": [
+        "417396000"
+      ]
+    },
+    {
+      "id": "ORG-virus",
+      "name": "Virus",
+      "roots": [
+        "49872002"
+      ]
+    },
+    {
+      "id": "ORG-archaea",
+      "name": "Archaea",
+      "roots": [
+        "419036000"
+      ]
+    }
+  ],
+  "rest": {
+    "id": "ORG-other-organism",
+    "name": "Other organism",
+    "within": "410607006"
+  }
+}
